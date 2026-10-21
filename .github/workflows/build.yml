@@ -1,0 +1,66 @@
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            type: deb
+            label: linux
+          - os: windows-latest
+            type: msi
+            label: windows
+          - os: macos-latest
+            type: dmg
+            label: macos
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build JAR
+        run: mvn -B clean package
+
+      - name: Prepare input folder
+        run: |
+          mkdir dist
+          cp target/almocotron.jar dist/
+
+      - name: Package installer
+        run: |
+          mkdir out
+          EXTRA=""
+          if [ "${{ matrix.label }}" = "windows" ]; then
+            EXTRA="--win-shortcut --win-menu"
+          fi
+          jpackage \
+            --type ${{ matrix.type }} \
+            --name Almocotron \
+            --app-version 1.0.0 \
+            --input dist \
+            --main-jar almocotron.jar \
+            --main-class org.almocatron.Main \
+            --add-modules java.desktop,java.logging,java.net.http,java.management,java.naming,java.xml,jdk.unsupported \
+            --dest out \
+            $EXTRA
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: almocotron-${{ matrix.label }}
+          path: out/*

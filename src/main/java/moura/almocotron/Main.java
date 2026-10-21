@@ -1,4 +1,4 @@
-package org.almocatron;
+package moura.almocotron;
 
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
